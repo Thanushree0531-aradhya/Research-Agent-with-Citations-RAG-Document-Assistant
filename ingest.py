@@ -20,7 +20,7 @@ def extract_text_from_pdf(file_path: str) -> str:
         text += page.get_text()
     return text
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
+def chunk_text(text: str, chunk_size: int = 300, overlap: int = 30) -> list[str]:
     words = text.split()
     chunks = []
     i = 0
@@ -30,12 +30,17 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]
         i += chunk_size - overlap
     return chunks
 
-def get_embedding(text: str) -> list[float]:
-    result = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=text
-    )
-    return result.embeddings[0].values
+def get_embeddings_batch(texts: list[str], batch_size: int = 20) -> list[list[float]]:
+    all_embeddings = []
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        result = client.models.embed_content(
+            model="gemini-embedding-001",
+            contents=batch
+        )
+        all_embeddings.extend([e.values for e in result.embeddings])
+        print(f"  Embedded {min(i+batch_size, len(texts))}/{len(texts)} chunks...")
+    return all_embeddings
 
 def ingest_document(file_path: str, doc_name: str):
     print(f"Processing {doc_name}...")
@@ -43,12 +48,14 @@ def ingest_document(file_path: str, doc_name: str):
     chunks = chunk_text(text)
     print(f"Total chunks: {len(chunks)}")
 
-    for i, chunk in enumerate(chunks):
-        embedding = get_embedding(chunk)
-        collection.add(
-            documents=[chunk],
-            embeddings=[embedding],
-            metadatas=[{"source": doc_name, "chunk_id": i}],
-            ids=[f"{doc_name}_chunk_{i}"]
-        )
+    # Get all embeddings in batches (much faster!)
+    embeddings = get_embeddings_batch(chunks)
+
+    # Add all to ChromaDB at once
+    collection.add(
+        documents=chunks,
+        embeddings=embeddings,
+        metadatas=[{"source": doc_name, "chunk_id": i} for i in range(len(chunks))],
+        ids=[f"{doc_name}_chunk_{i}" for i in range(len(chunks))]
+    )
     print(f"Ingestion complete for {doc_name}")
