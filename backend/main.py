@@ -53,6 +53,10 @@ async def query_document(request: QueryRequest):
         if not chunks:
             return {"answer": "No relevant documents found. Please upload a document first.", "citations": []}
         
+        # TEMP DEBUG - check page numbers in terminal
+        for c in chunks:
+            print(f"CHUNK page_number: {c.get('page_number', 'MISSING')}")
+        
         result = generate_answer(request.question, chunks)
         return result
     except Exception as e:

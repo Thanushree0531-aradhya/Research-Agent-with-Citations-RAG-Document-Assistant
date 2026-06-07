@@ -13,21 +13,19 @@ client = genai.Client(api_key=api_key)
 chroma_client = chromadb.PersistentClient(path="./chroma_store")
 collection = chroma_client.get_or_create_collection(name="documents")
 
-def extract_text_from_pdf(file_path: str) -> str:
+def extract_chunks_with_pages(file_path: str, chunk_size: int = 300, overlap: int = 30) -> list[dict]:
     doc = fitz.open(file_path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
-
-def chunk_text(text: str, chunk_size: int = 300, overlap: int = 30) -> list[str]:
-    words = text.split()
     chunks = []
-    i = 0
-    while i < len(words):
-        chunk = " ".join(words[i:i+chunk_size])
-        chunks.append(chunk)
-        i += chunk_size - overlap
+    for page_num, page in enumerate(doc, start=1):  # 1-indexed pages
+        text = page.get_text()
+        if not text.strip():
+            continue
+        words = text.split()
+        i = 0
+        while i < len(words):
+            chunk_text = " ".join(words[i:i+chunk_size])
+            chunks.append({"text": chunk_text, "page_number": page_num})
+            i += chunk_size - overlap
     return chunks
 
 def get_embeddings_batch(texts: list[str], batch_size: int = 20) -> list[list[float]]:
@@ -44,18 +42,20 @@ def get_embeddings_batch(texts: list[str], batch_size: int = 20) -> list[list[fl
 
 def ingest_document(file_path: str, doc_name: str):
     print(f"Processing {doc_name}...")
-    text = extract_text_from_pdf(file_path)
-    chunks = chunk_text(text)
-    print(f"Total chunks: {len(chunks)}")
+    chunk_dicts = extract_chunks_with_pages(file_path)
+    texts = [c["text"] for c in chunk_dicts]
+    print(f"Total chunks: {len(texts)}")
 
-    # Get all embeddings in batches (much faster!)
-    embeddings = get_embeddings_batch(chunks)
+    embeddings = get_embeddings_batch(texts)
 
-    # Add all to ChromaDB at once
     collection.add(
-        documents=chunks,
+        documents=texts,
         embeddings=embeddings,
-        metadatas=[{"source": doc_name, "chunk_id": i} for i in range(len(chunks))],
-        ids=[f"{doc_name}_chunk_{i}" for i in range(len(chunks))]
+        metadatas=[{
+            "source": doc_name,
+            "chunk_id": i,
+            "page_number": chunk_dicts[i]["page_number"]  # ← stored here
+        } for i in range(len(texts))],
+        ids=[f"{doc_name}_chunk_{i}" for i in range(len(texts))]
     )
     print(f"Ingestion complete for {doc_name}")
