@@ -1,5 +1,5 @@
 # DocMind - AI Chat with Document Search (RAG)
-> Document-aware AI assistant built for the Lawyers Guild Internship Program — Assignment Round
+> Document-aware AI assistant built for the Lawyers Guild Internship Program ï¿½ Assignment Round
 **Live Demo:** https://timely-crisp-76d7ce.netlify.app
 **Backend API:** https://huggingface.co/spaces/ThanushreeT/rag-backend
 ---
@@ -109,7 +109,6 @@ Groq with LLaMA 3.3 70B was chosen for fast inference and free tier availability
 ---
 ## Known Limitations
 - ChromaDB resets when Hugging Face Space restarts - users need to re-upload PDF after cold start (~30s)
-- Only text-based PDFs supported - scanned PDFs require OCR (not implemented)
 - Single shared vector store for all users in current implementation
 ---
 ## Deployment
