@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿# 📄 AI Chat with Document Search (RAG)
 > Document-aware AI assistant built for the Lawyers Guild Internship Program — Assignment Round
 **Live Demo:** [timely-crisp-76d7ce.netlify.app](https://timely-crisp-76d7ce.netlify.app)
@@ -189,3 +190,13 @@ AI tools (Claude) were used to assist with boilerplate code scaffolding and READ
 ## 👤 Author
 **Thanushree T**
 Lawyers Guild Internship Program — Assignment Round
+=======
+﻿---
+title: rag-backend
+emoji: 🤖
+colorFrom: purple
+colorTo: blue
+sdk: docker
+pinned: false
+---
+>>>>>>> b54a6c2e6cdd6fa33fc3ba3b487464e8e6095e0b
