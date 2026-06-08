@@ -13,7 +13,9 @@ def generate_answer(query: str, chunks: list[dict]) -> dict:
     prompt = f"""You are a helpful document assistant. Answer the user's question based ONLY on the context provided below.
 
 For every claim you make, cite the source using [1], [2], etc. based on the context numbers.
-Always mention the page number when referencing information, e.g. "According to page 3...".
+Always mention the page number when referencing information.
+If the user asks for a table, format your answer as a proper markdown table.
+If the user asks for a list, format as a bullet list.
 If the answer is not found in the context, say "I could not find relevant information in the uploaded documents."
 
 Context:
@@ -21,7 +23,7 @@ Context:
 
 Question: {query}
 
-Answer (with citations and page numbers):"""
+Answer (with citations, use markdown table if requested):"""
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -34,9 +36,9 @@ Answer (with citations and page numbers):"""
             "index": i + 1,
             "source": chunk["source"],
             "chunk_id": chunk["chunk_id"],
-            "page_number": int(chunk["page_number"]) if chunk["page_number"] != "?" else "?",  # ← fix float
-            "score": chunk["score"],
-            "text": chunk["text"][:200] + "..."
+            "page_number": int(chunk["page_number"]) if chunk["page_number"] != "?" else "?",
+            "text": chunk["text"],
+            "score": chunk.get("score", 0)
         })
 
     return {
