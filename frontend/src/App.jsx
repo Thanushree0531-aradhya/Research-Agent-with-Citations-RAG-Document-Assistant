@@ -126,10 +126,39 @@ style.textContent = `
     background: #111118;
     border: 1px solid #1e1c2a;
     transition: all 0.15s;
+    cursor: pointer;
   }
   .doc-item:hover { border-color: #2e2b40; color: #c4c0d8; }
+  .doc-item.active {
+    border-color: #7c5cfc;
+    background: rgba(124,92,252,0.08);
+    color: #c4b8ff;
+  }
   .doc-icon { font-size: 14px; flex-shrink: 0; }
-  .doc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .doc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .doc-check { font-size: 12px; color: #7c5cfc; flex-shrink: 0; }
+  .active-doc-banner {
+    font-size: 11px;
+    color: #7c5cfc;
+    background: rgba(124,92,252,0.08);
+    border: 1px solid rgba(124,92,252,0.2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .clear-doc {
+    margin-left: auto;
+    cursor: pointer;
+    color: #4a4760;
+    font-size: 13px;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .clear-doc:hover { color: #c4c0d8; }
   .main {
     display: flex;
     flex-direction: column;
@@ -394,6 +423,7 @@ export default function App() {
   const [documents, setDocuments] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
   const [openCitations, setOpenCitations] = useState({});
+  const [selectedDoc, setSelectedDoc] = useState(null); // ← NEW
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -433,7 +463,10 @@ export default function App() {
     setLoading(true);
     setChatHistory(prev => [...prev, { type: "q", text: q }]);
     try {
-      const res = await axios.post(`${API}/query`, { question: q }, { headers: HEADERS });
+      // ← Send selectedDoc as source filter
+      const payload = { question: q };
+      if (selectedDoc) payload.source = selectedDoc;
+      const res = await axios.post(`${API}/query`, payload, { headers: HEADERS });
       setChatHistory(prev => [...prev, { type: "a", ...res.data }]);
     } catch (err) {
       setChatHistory(prev => [...prev, {
@@ -501,12 +534,36 @@ export default function App() {
             <>
               <div className="divider" />
               <div className="section-label">Indexed Documents</div>
+
+              {/* ← Active doc banner */}
+              {selectedDoc && (
+                <div className="active-doc-banner">
+                  <span>🎯</span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {selectedDoc}
+                  </span>
+                  <button className="clear-doc" onClick={() => setSelectedDoc(null)}>✕</button>
+                </div>
+              )}
+
               {documents.map((doc, i) => (
-                <div key={i} className="doc-item">
+                <div
+                  key={i}
+                  className={`doc-item ${selectedDoc === doc ? "active" : ""}`}
+                  onClick={() => setSelectedDoc(prev => prev === doc ? null : doc)}
+                  title={selectedDoc === doc ? "Click to deselect" : "Click to filter by this doc"}
+                >
                   <span className="doc-icon">📎</span>
-                  <span className="doc-name" title={doc}>{doc}</span>
+                  <span className="doc-name">{doc}</span>
+                  {selectedDoc === doc && <span className="doc-check">✓</span>}
                 </div>
               ))}
+
+              {!selectedDoc && (
+                <div style={{ fontSize: 11, color: "#2e2b40", marginTop: 8, textAlign: "center" }}>
+                  Click a doc to filter queries
+                </div>
+              )}
             </>
           )}
         </div>
@@ -516,16 +573,23 @@ export default function App() {
         <div className="chat-header">
           <div className="chat-title">Ask your documents</div>
           <div className="chat-meta">
-            {answerCount > 0 ? `${answerCount} response${answerCount > 1 ? "s" : ""}` : "Ready"}
+            {selectedDoc
+              ? `Searching: ${selectedDoc}`
+              : answerCount > 0
+                ? `${answerCount} response${answerCount > 1 ? "s" : ""}`
+                : "Ready"}
           </div>
         </div>
-
         <div className="chat-history">
           {chatHistory.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">💬</div>
               <div className="empty-text">No questions yet</div>
-              <div className="empty-sub">Upload a PDF and start asking questions. Your conversation will appear here.</div>
+              <div className="empty-sub">
+                {selectedDoc
+                  ? `Asking about: ${selectedDoc}`
+                  : "Upload a PDF and start asking questions. Click a document to filter."}
+              </div>
             </div>
           ) : (
             chatHistory.map((msg, idx) => (
@@ -556,7 +620,6 @@ export default function App() {
                                   <div className="citation-meta">
                                     {c.page_number && c.page_number !== "?" && (
                                       <span className="citation-page">
-                                        {/* ← FIXED: Math.floor to strip decimal */}
                                         pg {Math.floor(Number(c.page_number))}
                                       </span>
                                     )}
@@ -583,13 +646,12 @@ export default function App() {
                 <div className="dots">
                   <div className="dot"/><div className="dot"/><div className="dot"/>
                 </div>
-                Searching documents…
+                {selectedDoc ? `Searching ${selectedDoc}…` : "Searching documents…"}
               </div>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
-
         <div className="input-area">
           <div className="input-row">
             <textarea
@@ -601,7 +663,7 @@ export default function App() {
                 e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything about your documents…"
+              placeholder={selectedDoc ? `Ask about ${selectedDoc}…` : "Ask anything about your documents…"}
               rows={1}
             />
             <button className="btn-send" onClick={handleQuery} disabled={!question.trim() || loading}>
