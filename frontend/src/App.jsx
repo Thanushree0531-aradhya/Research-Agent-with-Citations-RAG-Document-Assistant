@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
 
 const API = "https://thanushreet-rag-backend.hf.space";
 const HEADERS = {};
@@ -247,7 +248,43 @@ style.textContent = `
     font-size: 14px;
     line-height: 1.75;
     color: #c8c5d8;
-    white-space: pre-wrap;
+  }
+  .answer-bubble p { margin-bottom: 8px; }
+  .answer-bubble p:last-child { margin-bottom: 0; }
+  .answer-bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+  .answer-bubble th {
+    background: #1a1828;
+    color: #9d8cfc;
+    padding: 8px 12px;
+    text-align: left;
+    border: 1px solid #2a2835;
+    font-weight: 500;
+  }
+  .answer-bubble td {
+    padding: 7px 12px;
+    border: 1px solid #1e1c2a;
+    color: #c8c5d8;
+  }
+  .answer-bubble tr:nth-child(even) td { background: #0f0f16; }
+  .answer-bubble tr:hover td { background: #1a1828; }
+  .answer-bubble ul, .answer-bubble ol {
+    padding-left: 20px;
+    margin: 8px 0;
+  }
+  .answer-bubble li { margin-bottom: 4px; }
+  .answer-bubble strong { color: #e8e6f0; font-weight: 500; }
+  .answer-bubble code {
+    background: #1a1828;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #9d8cfc;
   }
   .answer-label {
     font-size: 10px;
@@ -423,7 +460,7 @@ export default function App() {
   const [documents, setDocuments] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
   const [openCitations, setOpenCitations] = useState({});
-  const [selectedDoc, setSelectedDoc] = useState(null); // ← NEW
+  const [selectedDoc, setSelectedDoc] = useState(null);
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -463,7 +500,6 @@ export default function App() {
     setLoading(true);
     setChatHistory(prev => [...prev, { type: "q", text: q }]);
     try {
-      // ← Send selectedDoc as source filter
       const payload = { question: q };
       if (selectedDoc) payload.source = selectedDoc;
       const res = await axios.post(`${API}/query`, payload, { headers: HEADERS });
@@ -534,8 +570,6 @@ export default function App() {
             <>
               <div className="divider" />
               <div className="section-label">Indexed Documents</div>
-
-              {/* ← Active doc banner */}
               {selectedDoc && (
                 <div className="active-doc-banner">
                   <span>🎯</span>
@@ -545,7 +579,6 @@ export default function App() {
                   <button className="clear-doc" onClick={() => setSelectedDoc(null)}>✕</button>
                 </div>
               )}
-
               {documents.map((doc, i) => (
                 <div
                   key={i}
@@ -558,7 +591,6 @@ export default function App() {
                   {selectedDoc === doc && <span className="doc-check">✓</span>}
                 </div>
               ))}
-
               {!selectedDoc && (
                 <div style={{ fontSize: 11, color: "#2e2b40", marginTop: 8, textAlign: "center" }}>
                   Click a doc to filter queries
@@ -599,7 +631,9 @@ export default function App() {
                 ) : (
                   <div className="message-a">
                     <div className="answer-label">Answer</div>
-                    <div className="answer-bubble">{msg.answer}</div>
+                    <div className="answer-bubble">
+                      <ReactMarkdown>{msg.answer}</ReactMarkdown>
+                    </div>
                     {msg.citations?.length > 0 && (
                       <>
                         <button
@@ -614,18 +648,12 @@ export default function App() {
                             {msg.citations.map((c, ci) => (
                               <div key={ci} className="citation-card">
                                 <div className="citation-header">
-                                  <span className="citation-source">
-                                    [{c.index}] {c.source}
-                                  </span>
+                                  <span className="citation-source">[{c.index}] {c.source}</span>
                                   <div className="citation-meta">
                                     {c.page_number && c.page_number !== "?" && (
-                                      <span className="citation-page">
-                                        pg {Math.floor(Number(c.page_number))}
-                                      </span>
+                                      <span className="citation-page">pg {Math.floor(Number(c.page_number))}</span>
                                     )}
-                                    <span className="citation-score">
-                                      {Number(c.score).toFixed(4)}
-                                    </span>
+                                    <span className="citation-score">{Number(c.score).toFixed(4)}</span>
                                   </div>
                                 </div>
                                 <div className="citation-text">{c.text}</div>
