@@ -22,6 +22,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 class QueryRequest(BaseModel):
     question: str
+    source: str = None  # optional document filter
 
 @app.get("/")
 def root():
@@ -31,12 +32,12 @@ def root():
 async def upload_document(file: UploadFile = File(...)):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
-    
+
     file_path = os.path.join(UPLOAD_DIR, file.filename)
-    
+
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
+
     try:
         ingest_document(file_path, file.filename)
         return {"message": f"{file.filename} uploaded and processed successfully"}
@@ -47,16 +48,12 @@ async def upload_document(file: UploadFile = File(...)):
 async def query_document(request: QueryRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
-    
+
     try:
-        chunks = retrieve_chunks(request.question, top_k=5)
+        chunks = retrieve_chunks(request.question, top_k=5, source=request.source)
         if not chunks:
             return {"answer": "No relevant documents found. Please upload a document first.", "citations": []}
-        
-        # TEMP DEBUG - check page numbers in terminal
-        for c in chunks:
-            print(f"CHUNK page_number: {c.get('page_number', 'MISSING')}")
-        
+
         result = generate_answer(request.question, chunks)
         return result
     except Exception as e:

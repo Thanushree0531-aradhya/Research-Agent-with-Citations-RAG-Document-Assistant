@@ -16,12 +16,15 @@ def get_embedding(text: str) -> list[float]:
     )
     return result.embeddings[0].values
 
-def retrieve_chunks(query: str, top_k: int = 5) -> list[dict]:
+def retrieve_chunks(query: str, top_k: int = 5, source: str = None) -> list[dict]:
     query_embedding = get_embedding(query)
+
+    where_filter = {"source": source} if source else None
 
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=top_k,
+        where=where_filter,
         include=["documents", "metadatas", "distances"]
     )
 
@@ -32,8 +35,7 @@ def retrieve_chunks(query: str, top_k: int = 5) -> list[dict]:
             "text": results["documents"][0][i],
             "source": results["metadatas"][0][i]["source"],
             "chunk_id": results["metadatas"][0][i]["chunk_id"],
-            "page_number": int(raw_page) if raw_page is not None else "?",  # ← fix float
+            "page_number": int(raw_page) if raw_page is not None else "?",
             "score": round(1 - results["distances"][0][i], 4)
         })
-
     return chunks
