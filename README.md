@@ -1,4 +1,7 @@
 # 
+**Frontend (Netlify):**  
+https://research-agent-with-citations.netlify.app/
+
 ## Backend API (Hugging Face Space)
 
 https://huggingface.co/spaces/ThanushreeT/research-agent-backend
