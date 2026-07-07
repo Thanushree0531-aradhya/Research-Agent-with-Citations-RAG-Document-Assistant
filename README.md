@@ -1,4 +1,7 @@
-# Research Agent with Citations — RAG Document Assistant
+# 
+## Backend API (Hugging Face Space)
+
+https://huggingface.co/spaces/ThanushreeT/research-agent-backend
 
 A Retrieval-Augmented Generation (RAG) research assistant that allows users to upload one or more PDF documents and ask natural language questions. The system retrieves semantically relevant content and generates grounded answers using **only the uploaded documents**, with **inline citations** pointing to the exact source file and page number. If the requested information is not present in the uploaded documents, the assistant explicitly states that instead of generating unsupported responses.
 
