@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 
-const API = "http://localhost:8000";
+const API = "https://thanushreet-research-agent-backend.hf.space";
 const HEADERS = {};
 
 const style = document.createElement("style");
