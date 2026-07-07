@@ -1,129 +1,281 @@
-# DocMind - AI Chat with Document Search (RAG)
-> Document-aware AI assistant built for the Lawyers Guild Internship Program � Assignment Round
-**Live Demo:** https://timely-crisp-76d7ce.netlify.app
-**Backend API:** https://huggingface.co/spaces/ThanushreeT/rag-backend
+# Research Agent with Citations — RAG Document Assistant
+
+A Retrieval-Augmented Generation (RAG) research assistant that allows users to upload one or more PDF documents and ask natural language questions. The system retrieves semantically relevant content and generates grounded answers using **only the uploaded documents**, with **inline citations** pointing to the exact source file and page number. If the requested information is not present in the uploaded documents, the assistant explicitly states that instead of generating unsupported responses.
+
 ---
+
 ## Overview
-A Retrieval-Augmented Generation (RAG) application that allows users to upload PDF documents and ask natural language questions. The assistant retrieves semantically relevant chunks and generates grounded answers with exact page number citations.
-This project was built as part of the Lawyers Guild Internship Program Assignment Round, which evaluates:
-- Technical fundamentals
-- Problem-solving ability
-- Practical implementation skills
-- Code quality and system thinking
-- Communication and ownership
+
+This project was built as a document-grounded AI research assistant that combines semantic search, vector embeddings, and large language models to answer questions from uploaded PDF documents.
+
+The application follows a complete Retrieval-Augmented Generation (RAG) pipeline:
+
+1. Upload one or more PDF documents.
+2. Extract and chunk document content.
+3. Generate semantic embeddings.
+4. Retrieve the most relevant document chunks.
+5. Generate an answer strictly from retrieved context.
+6. Return the answer together with document and page citations.
+
+The system is designed to minimize hallucinations by refusing to answer questions that are unsupported by the uploaded documents.
+
 ---
-## Key Features
-- Upload PDF documents and process them for semantic search
-- Chunk documents per page for accurate page-level citations
-- Embed chunks using Google Gemini embedding model
-- Retrieve relevant chunks using ChromaDB vector similarity search
-- Generate AI answers with citations and page numbers using Groq LLaMA
-- Clean responsive chat UI built with React
-- Page number badge on every citation card
-- Hallucination prevention - LLM answers only from document context
+
+# Key Features
+
+* Upload one or more PDF documents
+* Automatic text extraction using PyMuPDF
+* OCR fallback using Tesseract OCR for scanned/image PDFs
+* Page-level chunking with overlap for accurate citations
+* Semantic embeddings using Google Gemini (`gemini-embedding-001`)
+* ChromaDB vector similarity search
+* Grounded answer generation using Groq LLaMA 3.3 70B
+* Inline citations containing source document and page number
+* Relevance score returned for every retrieved citation
+* Optional document filtering during retrieval
+* Hallucination prevention by answering only from retrieved context
+
 ---
-## Tech Stack
-| Layer | Technology | Purpose |
-|---|---|---|
-| Frontend | React + Vite | Document upload UI + chat interface |
-| Backend | FastAPI (Python) | RAG pipeline orchestration |
-| Embeddings | Gemini gemini-embedding-001 | Semantic text embeddings |
-| Vector Store | ChromaDB | Chunk retrieval by similarity |
-| LLM | Groq llama-3.3-70b-versatile | Answer generation with page citations |
-| Hosting (FE) | Netlify | Static frontend deployment |
-| Hosting (BE) | Hugging Face Spaces | Backend API deployment |
+
+# Tech Stack
+
+| Layer        | Technology                     | Purpose                           |
+| ------------ | ------------------------------ | --------------------------------- |
+| Frontend     | React + Vite                   | Upload UI and chat interface      |
+| Backend      | FastAPI                        | RAG pipeline orchestration        |
+| Embeddings   | Gemini `gemini-embedding-001`  | Semantic embeddings               |
+| Vector Store | ChromaDB                       | Similarity search                 |
+| LLM          | Groq `llama-3.3-70b-versatile` | Answer generation                 |
+| OCR          | Tesseract OCR + pdf2image      | Text extraction from scanned PDFs |
+
 ---
-## Project Structure
+
+# Project Structure
+
+```text
 rag-document-assistant/
-- frontend/         React app
-  - src/App.jsx     Main component with chat UI
-  - public/
-  - index.html
-  - package.json
-- backend/          Python backend
-  - main.py         FastAPI entry point
-  - ingest.py       PDF loading, chunking, embedding
-  - retriever.py    ChromaDB vector store + search
-  - generator.py    LLM prompt + answer generation
-  - requirements.txt
-- netlify.toml      Netlify build config
-- README.md
+
+frontend/
+├── src/
+│   ├── App.jsx
+│   ├── components/
+│   └── services/
+├── package.json
+
+backend/
+├── main.py
+├── ingest.py
+├── retriever.py
+├── generator.py
+├── requirements.txt
+└── .env
+
+samples/
+├── transcript.md
+
+questions.md
+
+README.md
+```
+
 ---
-## Getting Started
-### Prerequisites
-- Python 3.9+
-- Node.js 18+
-- Gemini API key (Google AI Studio)
-- Groq API key (groq.com)
-### Backend Setup
+
+# Getting Started
+
+## Prerequisites
+
+* Python 3.9+
+* Node.js 18+
+* Google Gemini API Key
+* Groq API Key
+
+Optional (for scanned PDFs)
+
+* Tesseract OCR
+* Poppler
+
+---
+
+# Backend Setup
+
+```bash
 cd backend
+
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Linux/macOS
+source venv/bin/activate
+
 pip install -r requirements.txt
-Create .env file:
-GEMINI_API_KEY=your_gemini_key
-GROQ_API_KEY=your_groq_key
-python -m uvicorn main:app --reload --port 8000
-### Frontend Setup
+```
+
+Create a `.env` file inside the `backend` directory.
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
+```
+
+Run the backend server.
+
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+---
+
+# Frontend Setup
+
+```bash
 cd frontend
+
 npm install
+
 npm run dev
-Update API URL in src/App.jsx:
-const API = 'http://localhost:8000';
+```
+
+If necessary, update the backend API URL inside `src/App.jsx`.
+
+```javascript
+const API = "http://localhost:8000";
+```
+
 ---
-## Environment Variables
-| Variable | Required | Description |
-|---|---|---|
-| GEMINI_API_KEY | Yes | Google Gemini API key for embeddings |
-| GROQ_API_KEY | Yes | Groq API key for LLaMA answer generation |
+
+# Environment Variables
+
+| Variable       | Required | Description                     |
+| -------------- | -------- | ------------------------------- |
+| GEMINI_API_KEY | Yes      | Google Gemini embedding API key |
+| GROQ_API_KEY   | Yes      | Groq LLaMA API key              |
+
 ---
-## How It Works - RAG Pipeline
-### 1. Document Ingestion
-1. PDF uploaded and extracted page by page using PyMuPDF
-2. Each page chunked into overlapping word chunks (300 words, 30 overlap)
-3. Chunks embedded using Gemini gemini-embedding-001
-4. Vectors stored in ChromaDB with page number metadata
-### 2. Query and Answer
-1. User question embedded using Gemini
-2. Top 5 most relevant chunks retrieved from ChromaDB
-3. Chunks passed to Groq LLaMA with page numbers in prompt
-4. LLM generates answer citing exact page numbers
-5. Citation cards shown in UI with green page badge and relevance score
+
+# How It Works
+
+## 1. Document Ingestion
+
+* User uploads one or more PDF documents.
+* Text is extracted using PyMuPDF.
+* If the document has no extractable text, OCR is performed using Tesseract.
+* Each document is divided into overlapping chunks.
+* Every chunk stores:
+
+  * Source filename
+  * Page number
+  * Chunk text
+* Gemini generates embeddings for each chunk.
+* Embeddings are stored in ChromaDB.
+
 ---
-## Design Decisions and Trade-offs
-### Chunking Strategy
-Page-level chunking was chosen so each chunk carries its page number as metadata. This enables accurate page citations in answers. Fixed-size word chunking with overlap preserves context across chunk boundaries.
-### Vector Store
-ChromaDB persistent client was used instead of FAISS for built-in metadata support. This allows storing page numbers alongside vectors without a separate lookup table. For production, a hosted vector DB like Pinecone would be more appropriate.
-### Embedding Model
-Gemini gemini-embedding-001 provides high quality embeddings with generous free tier limits, suitable for interactive use.
-### LLM
-Groq with LLaMA 3.3 70B was chosen for fast inference and free tier availability. The prompt explicitly instructs the model to cite page numbers, reducing hallucination.
-### Hosting
-- Frontend on Netlify - Zero-config static hosting with GitHub auto-deploy
-- Backend on Hugging Face Spaces - Free Docker-based hosting for ML workloads
+
+## 2. Query Processing
+
+* User submits a natural language question.
+* The question is embedded using Gemini.
+* ChromaDB retrieves the most relevant chunks.
+* Retrieved context is passed to Groq LLaMA.
+* The model generates an answer strictly from the retrieved context.
+* Every factual statement is accompanied by inline citations.
+* If no supporting information exists, the assistant returns a "not found" response.
+
 ---
-## Edge Cases Handled
-- Empty or corrupted PDF uploads return a clear error message
-- Questions with no relevant context return not found response instead of hallucinating
-- Old documents without page metadata gracefully show unknown page
-- Large documents chunked safely without exceeding token limits
+
+# Sample Test Suite
+
+The repository includes a reproducible evaluation set.
+
+## Files Included
+
+* `questions.md` – Contains 10 evaluation questions covering three sample PDF documents.
+* `samples/transcript.md` – Contains the JSON responses generated by the application, including answers and citations.
+
+## Sample Documents
+
+* `oec_pec_application.pdf`
+* `CMRIT_Internship_Placement_Policy.pdf`
+* `UDEMY.pdf`
+
+## Running the Test Suite
+
+1. Start the backend server.
+2. Upload the three sample PDF documents.
+3. Run each question using:
+
+```powershell
+curl.exe -X POST http://localhost:8000/query ^
+-H "Content-Type: application/json" ^
+-d "{\"question\":\"<paste question here>\"}"
+```
+
+4. Compare the generated responses with `samples/transcript.md`.
+
 ---
-## Known Limitations
-- ChromaDB resets when Hugging Face Space restarts - users need to re-upload PDF after cold start (~30s)
-- Single shared vector store for all users in current implementation
+
+# Design Decisions
+
+## Page-Level Metadata
+
+Each chunk stores its original page number so every generated answer can reference the exact page where the information was found.
+
+## Chunking Strategy
+
+Fixed-size overlapping chunks were selected because they preserve context while keeping retrieval efficient.
+
+## Vector Database
+
+ChromaDB was chosen because it provides persistent local storage, metadata filtering, and requires minimal configuration.
+
+## Embedding Model
+
+Google Gemini embeddings provide high-quality semantic representations while offering a generous free usage tier.
+
+## Language Model
+
+Groq-hosted LLaMA 3.3 70B was selected because it offers fast inference and strong instruction-following performance.
+
+## OCR
+
+OCR is used only when uploaded PDFs contain no selectable text.
+
 ---
-## Deployment
-### Frontend - Netlify
-Connected to GitHub repo for auto-deploy on push.
-netlify.toml configures base directory as frontend/.
-### Backend - Hugging Face Spaces
-Deployed as Docker Space at ThanushreeT/rag-backend.
-Push changes to redeploy:
-git remote add hf https://huggingface.co/spaces/ThanushreeT/rag-backend
-git push hf main
+
+# Tradeoffs
+
+* Fixed-size chunking is simpler than semantic chunking but may occasionally split related information.
+* ChromaDB is ideal for local development but a managed vector database such as Pinecone or Qdrant would be better for production.
+* OCR accuracy depends on document quality and scan resolution.
+* Retrieval quality depends on chunk size and embedding quality.
+* The current implementation processes uploaded documents within a single backend session.
+
 ---
-## AI Usage Disclosure
-AI tools (Claude) were used to assist with:
-- Boilerplate code scaffolding
-- Debugging assistance
-- README drafting
-All architectural decisions, retrieval pipeline design, prompt engineering, page number feature implementation, and deployment choices were made and are fully understood by the author.
+
+# Edge Cases Handled
+
+* Empty PDF uploads
+* Corrupted PDF files
+* Scanned documents
+* Questions with no supporting evidence
+* Multiple uploaded PDFs
+* Missing page metadata
+* Hallucination prevention for unsupported queries
+
+---
+
+# Known Limitations
+
+* Uploaded documents are not persisted permanently.
+* ChromaDB is intended for local development.
+* Very large PDF collections may increase indexing time.
+* OCR quality varies depending on scan quality.
+
+---
+
+
+
+
+
+

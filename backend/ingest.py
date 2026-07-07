@@ -3,17 +3,26 @@ import chromadb
 from google import genai
 from dotenv import load_dotenv
 import os
-import pytesseract
-from PIL import Image
-from pdf2image import convert_from_path
 
 load_dotenv()
 
-# Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# OCR support is optional. If pytesseract/pdf2image/Tesseract/Poppler aren't
+# installed, we skip OCR gracefully instead of crashing the whole app on import.
+try:
+    import pytesseract
+    from pdf2image import convert_from_path
 
-# Poppler path
-POPPLER_PATH = r"C:\Users\thanu\Downloads\Release-26.02.0-0\poppler-26.02.0\Library\bin"
+    # Only set these if you're on Windows and the binaries aren't on PATH.
+    # Leave unset on Linux/Mac where tesseract/pdftoppm are usually already on PATH.
+    _tesseract_cmd = os.getenv("TESSERACT_CMD")
+    if _tesseract_cmd:
+        pytesseract.pytesseract.tesseract_cmd = _tesseract_cmd
+    POPPLER_PATH = os.getenv("POPPLER_PATH")  # None is fine on Linux/Mac
+
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+    POPPLER_PATH = None
 
 api_key = os.getenv("GEMINI_API_KEY")
 print(f"API KEY LOADED: {api_key[:10] if api_key else 'NOT FOUND'}")
@@ -26,10 +35,13 @@ def extract_chunks_with_pages(file_path: str, chunk_size: int = 300, overlap: in
     doc = fitz.open(file_path)
     chunks = []
 
-    # Check if PDF needs OCR (scanned)
     needs_ocr = all(not page.get_text().strip() for page in doc)
 
     if needs_ocr:
+        if not OCR_AVAILABLE:
+            print("Scanned PDF detected, but OCR dependencies (pytesseract/pdf2image) "
+                  "are not installed. Skipping OCR — no text will be extracted from this file.")
+            return chunks
         print("Scanned PDF detected — using OCR...")
         images = convert_from_path(file_path, poppler_path=POPPLER_PATH)
         for page_num, image in enumerate(images, start=1):
@@ -61,10 +73,26 @@ def get_embeddings_batch(texts: list[str], batch_size: int = 20) -> list[list[fl
     all_embeddings = []
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i+batch_size]
-        result = client.models.embed_content(
-            model="gemini-embedding-001",
-            contents=batch
-        )
+        print(f"  Sending batch of {len(batch)} texts to Gemini embed API...")
+        print(f"  Sample text (first 100 chars): {batch[0][:100]!r}")
+        try:
+            result = client.models.embed_content(
+                model="gemini-embedding-001",
+                contents=batch
+            )
+        except Exception as e:
+            print(f"  GEMINI API CALL RAISED AN EXCEPTION: {type(e).__name__}: {e}")
+            raise RuntimeError(f"Gemini embedding API call failed: {e}") from e
+
+        print(f"  Raw result.embeddings length: {len(result.embeddings) if result.embeddings else 0}")
+
+        if not result.embeddings:
+            raise RuntimeError(
+                f"Gemini API returned ZERO embeddings for a batch of {len(batch)} texts. "
+                f"This usually means an invalid/expired GEMINI_API_KEY, a quota issue, "
+                f"or the model name is wrong. Full API response: {result}"
+            )
+
         all_embeddings.extend([e.values for e in result.embeddings])
         print(f"  Embedded {min(i+batch_size, len(texts))}/{len(texts)} chunks...")
     return all_embeddings
