@@ -30,7 +30,7 @@ Question: {query}
 Answer (concise prose, inline [n] citations only, no page numbers or tables unless explicitly asked):"""
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": prompt}]
     )
 
